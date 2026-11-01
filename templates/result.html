@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Scan Report #{{ scan.id }} – DocShield Bharat{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 small">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active">Scan Report #{{ scan.id }}</li>
+            </ol>
+        </nav>
+        <h4 class="fw-bold mb-0">
+            Screening Report: <span class="text-primary">{{ scan.original_filename }}</span>
+        </h4>
+    </div>
+    <div class="d-flex gap-2">
+        {% if signed_url %}
+            <a href="{{ signed_url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-cloud-download me-1"></i>Download Original (Private Signed Link)
+            </a>
+        {% elif scan.storage_backend == 'local' %}
+            <a href="{{ url_for('serve_local_file', filename=scan.stored_path) }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>View Uploaded File
+            </a>
+        {% endif %}
+        <a href="{{ url_for('index') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Scan Another Indian Document
+        </a>
+    </div>
+</div>
+
+<!-- Top Risk Banner Card -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <div class="row align-items-center g-3">
+            <div class="col-md-4 text-center text-md-start border-end-md">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Screening Result</div>
+                {% if scan.risk_level == 'High Risk' %}
+                    <span class="badge bg-danger fs-5 px-3 py-2"><i class="bi bi-shield-exclamation me-1"></i>High Risk</span>
+                {% elif scan.risk_level == 'Medium Risk' %}
+                    <span class="badge bg-warning text-dark fs-5 px-3 py-2"><i class="bi bi-exclamation-triangle me-1"></i>Medium Risk</span>
+                {% else %}
+                    <span class="badge bg-success fs-5 px-3 py-2"><i class="bi bi-shield-check me-1"></i>Low Risk</span>
+                {% endif %}
+                <div class="mt-2 small text-muted">
+                    Risk Score: <strong>{{ scan.risk_score }} / 100</strong>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="row g-2 small">
+                    <div class="col-sm-6">
+                        <span class="text-muted">Indian Document Category:</span>
+                        <strong class="text-primary">{{ scan.pdf_metadata.get('indian_document_category', 'General Indian Official Document') }}</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <span class="text-muted">Scanned At (IST):</span>
+                        <strong>{{ scan.created_at }}</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <span class="text-muted">File Type &amp; Size:</span>
+                        <strong>{{ scan.file_type }} ({{ (scan.file_size_bytes / 1024)|round(1) }} KB)</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <span class="text-muted">Duplicate Check:</span>
+                        {% if scan.is_duplicate %}
+                            <span class="badge bg-warning text-dark">
+                                Duplicate of <a href="{{ url_for('view_scan', scan_id=scan.duplicate_of_id) }}" class="text-dark">Scan #{{ scan.duplicate_of_id }}</a>
+                            </span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Unique SHA-256 Hash</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-12">
+                        <span class="text-muted">SHA-256 Digest:</span>
+                        <code class="user-select-all ms-1">{{ scan.sha256_hash }}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Fraud Indicators & Extracted Indian Entities -->
+    <div class="col-lg-6">
+        <!-- Rule-Based Fraud Indicators -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-flag text-danger me-2"></i>Detected Indian Compliance &amp; Fraud Indicators</h6>
+                <span class="badge bg-secondary">{{ scan.fraud_indicators|length }} Flag(s)</span>
+            </div>
+            <div class="card-body">
+                {% if scan.fraud_indicators %}
+                    <div class="list-group list-group-flush">
+                        {% for flag in scan.fraud_indicators %}
+                        <div class="list-group-item px-0 py-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <span class="fw-semibold">
+                                    {% if flag.severity == 'high' %}
+                                        <span class="badge bg-danger me-1">HIGH (+{{ flag.points }})</span>
+                                    {% elif flag.severity == 'medium' %}
+                                        <span class="badge bg-warning text-dark me-1">MEDIUM (+{{ flag.points }})</span>
+                                    {% else %}
+                                        <span class="badge bg-info text-dark me-1">LOW (+{{ flag.points }})</span>
+                                    {% endif %}
+                                    {{ flag.title }}
+                                </span>
+                                <code class="small text-muted">{{ flag.code }}</code>
+                            </div>
+                            <p class="mb-0 small text-muted">{{ flag.detail }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-success">
+                        <i class="bi bi-check2-circle display-6 d-block mb-2"></i>
+                        <strong>No Indian compliance or forensic anomalies triggered.</strong>
+                        <p class="small text-muted mb-0 mt-1">Document passed SHA-256 uniqueness, PAN/Aadhaar/GSTIN/IFSC structure, and PDF metadata screening.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Extracted Key Indian Entities -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill text-primary me-2"></i>Extracted Indian Entities (PAN, Aadhaar, GSTIN, IFSC, PIN)</h6>
+            </div>
+            <div class="card-body small">
+                <div class="mb-3">
+                    <div class="text-muted fw-semibold mb-1">Detected Citizen / Entity Name:</div>
+                    {% if scan.extracted_name %}
+                        <span class="fs-6 fw-bold text-dark">{{ scan.extracted_name }}</span>
+                    {% else %}
+                        <span class="text-muted fst-italic">No labeled name field detected</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted fw-semibold mb-1">Detected Dates (Indian DD/MM/YYYY Format):</div>
+                    {% if scan.extracted_dates %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for d in scan.extracted_dates %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">{{ d }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span class="text-muted fst-italic">No standard dates detected</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted fw-semibold mb-1">Detected Indian Identifiers (PAN / Aadhaar / GSTIN / IFSC / Cert ID):</div>
+                    {% if scan.extracted_doc_numbers %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for num in scan.extracted_doc_numbers %}
+                                <span class="badge bg-dark font-monospace px-2 py-1">{{ num }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span class="text-muted fst-italic">No Indian document/ID numbers detected</span>
+                    {% endif %}
+                </div>
+
+                {% set ind = scan.pdf_metadata.get('indian_identifiers_breakdown', {}) %}
+                {% if ind and ind.get('inr_amounts') %}
+                <div>
+                    <div class="text-muted fw-semibold mb-1">Detected INR (₹) Currency Amounts:</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for amt in ind.get('inr_amounts', []) %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">{{ amt }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: PDF / Image Metadata & Extracted OCR Text -->
+    <div class="col-lg-6">
+        <!-- Metadata & Structure Table -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-code-square text-primary me-2"></i>Document Metadata &amp; Structure Analysis</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0 small">
+                    <tbody>
+                        {% for key, val in scan.pdf_metadata.items() %}
+                        {% if key != 'indian_identifiers_breakdown' %}
+                        <tr>
+                            <th class="ps-3 text-muted" style="width: 40%;">{{ key }}</th>
+                            <td class="pe-3 font-monospace text-break">{{ val if val != '' else '—' }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Raw Extracted OCR Text -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-file-text text-primary me-2"></i>Extracted Text (Tesseract OCR + PDF)</h6>
+                <span class="badge bg-light text-dark border">{{ scan.extracted_text|length }} chars</span>
+            </div>
+            <div class="card-body">
+                {% if scan.extracted_text %}
+                    <pre class="ocr-text-box p-3 bg-light border rounded small mb-0">{{ scan.extracted_text }}</pre>
+                {% else %}
+                    <div class="text-muted small fst-italic">No readable text could be extracted from this file.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

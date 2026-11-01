@@ -1,0 +1,25 @@
+# Render Blueprint Specification (render.yaml)
+# Automatically deploys DocShield on Render's Free Docker Runtime from GitHub.
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: docshield-fraud-screening
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      - key: SUPABASE_BUCKET
+        value: "documents-private"
+      # Sensitive credentials must be entered in the Render Dashboard (sync: false prevents committing secrets)
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

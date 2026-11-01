@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Results Dashboard – DocShield{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-speedometer2 text-primary me-2"></i>Document Screening Dashboard</h4>
+        <p class="text-muted small mb-0">Audit log of all scanned documents, SHA-256 hashes, extracted entities, and risk classifications.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-sm {% if not active_filter %}btn-dark{% else %}btn-outline-dark{% endif %}">
+            All ({{ stats.total }})
+        </a>
+        <a href="{{ url_for('dashboard', risk='Low Risk') }}" class="btn btn-sm {% if active_filter == 'Low Risk' %}btn-success{% else %}btn-outline-success{% endif %}">
+            Low Risk ({{ stats.low_risk }})
+        </a>
+        <a href="{{ url_for('dashboard', risk='Medium Risk') }}" class="btn btn-sm {% if active_filter == 'Medium Risk' %}btn-warning{% else %}btn-outline-warning text-dark{% endif %}">
+            Medium Risk ({{ stats.medium_risk }})
+        </a>
+        <a href="{{ url_for('dashboard', risk='High Risk') }}" class="btn btn-sm {% if active_filter == 'High Risk' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+            High Risk ({{ stats.high_risk }})
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if scans %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Scan ID</th>
+                        <th>Filename</th>
+                        <th>Type</th>
+                        <th>Extracted Holder</th>
+                        <th>Document ID(s)</th>
+                        <th>SHA-256 (Prefix)</th>
+                        <th>Flags</th>
+                        <th>Risk Score</th>
+                        <th>Screening Result</th>
+                        <th>Scanned At</th>
+                        <th class="pe-3 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in scans %}
+                    <tr>
+                        <td class="ps-3 fw-bold">#{{ s.id }}</td>
+                        <td class="fw-semibold text-truncate" style="max-width: 180px;" title="{{ s.original_filename }}">
+                            {{ s.original_filename }}
+                            {% if s.is_duplicate %}
+                                <span class="badge bg-secondary ms-1" title="Exact SHA-256 Duplicate">Duplicate</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ s.file_type }}</span></td>
+                        <td>{{ s.extracted_name or '—' }}</td>
+                        <td>
+                            {% if s.extracted_doc_numbers %}
+                                <code>{{ s.extracted_doc_numbers[0] }}</code>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td><code class="text-muted">{{ s.sha256_hash[:12] }}...</code></td>
+                        <td>{{ s.fraud_indicators|length }}</td>
+                        <td class="fw-semibold">{{ s.risk_score }}/100</td>
+                        <td>
+                            {% if s.risk_level == 'High Risk' %}
+                                <span class="badge bg-danger">High Risk</span>
+                            {% elif s.risk_level == 'Medium Risk' %}
+                                <span class="badge bg-warning text-dark">Medium Risk</span>
+                            {% else %}
+                                <span class="badge bg-success">Low Risk</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ s.created_at }}</td>
+                        <td class="pe-3 text-end">
+                            <a href="{{ url_for('view_scan', scan_id=s.id) }}" class="btn btn-sm btn-outline-primary">
+                                View Report
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-inbox display-5 d-block mb-2"></i>
+            <h6>No matching scan records found.</h6>
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-sm mt-2">Upload a Document</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

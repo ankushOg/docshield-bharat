@@ -1,0 +1,46 @@
+/* DocShield Bharat Custom Stylesheet (static/css/style.css) */
+
+.tricolour-bar {
+    height: 5px;
+    background: linear-gradient(90deg, #FF9933 0%, #FF9933 33.33%, #FFFFFF 33.33%, #FFFFFF 66.66%, #138808 66.66%, #138808 100%);
+}
+
+.bg-navy {
+    background-color: #0f172a;
+}
+
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-dropzone {
+    border: 2px dashed #94a3b8;
+    background-color: #f8fafc;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+}
+
+.ocr-text-box {
+    max-height: 340px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@media (min-width: 768px) {
+    .border-end-md {
+        border-right: 1px solid #e2e8f0;
+    }
+}
